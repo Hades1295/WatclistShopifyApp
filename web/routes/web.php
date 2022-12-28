@@ -19,6 +19,9 @@ use Shopify\Utils;
 use Shopify\Webhooks\Registry;
 use Shopify\Webhooks\Topics;
 
+//controller
+use App\Http\Controllers\ProductController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -29,6 +32,14 @@ use Shopify\Webhooks\Topics;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
+
+//new routes
+Route::group(['prefix' => '/api', 'middleware' => ['shopify.auth']], function () {
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/count', [ProductController::class, 'count']);
+    Route::get('/products/create', [ProductController::class, 'seed']);
+});
 
 Route::fallback(function (Request $request) {
     if (Context::$IS_EMBEDDED_APP &&  $request->query("embedded", false) === "1") {
@@ -62,12 +73,34 @@ Route::get('/api/auth/callback', function (Request $request) {
     $shop = Utils::sanitizeShopDomain($request->query('shop'));
 
     $response = Registry::register('/api/webhooks', Topics::APP_UNINSTALLED, $shop, $session->getAccessToken());
+    $responseProd = Registry::register('/api/webhooks', Topics::PRODUCTS_UPDATE, $shop, $session->getAccessToken());
+    $responseInv = Registry::register('/api/webhooks', Topics::INVENTORY_ITEMS_UPDATE, $shop, $session->getAccessToken());
+
+
     if ($response->isSuccess()) {
         Log::debug("Registered APP_UNINSTALLED webhook for shop $shop");
     } else {
         Log::error(
             "Failed to register APP_UNINSTALLED webhook for shop $shop with response body: " .
                 print_r($response->getBody(), true)
+        );
+    }
+
+    if ($responseProd->isSuccess()) {
+        Log::debug("Registered PRODUCTS_UPDATE webhook for shop $shop");
+    } else {
+        Log::error(
+            "Failed to register PRODUCTS_UPDATE webhook for shop $shop with response body: " .
+                print_r($responseProd->getBody(), true)
+        );
+    }
+
+    if ($responseInv->isSuccess()) {
+        Log::debug("Registered INVENTORY_ITEMS_UPDATE webhook for shop $shop");
+    } else {
+        Log::error(
+            "Failed to register INVENTORY_ITEMS_UPDATE webhook for shop $shop with response body: " .
+                print_r($responseInv->getBody(), true)
         );
     }
 
@@ -83,61 +116,14 @@ Route::get('/api/auth/callback', function (Request $request) {
     return redirect($redirectUrl);
 });
 
-Route::get('/api/products/count', function (Request $request) {
-    /** @var AuthSession */
-    $session = $request->get('shopifySession'); // Provided by the shopify.auth middleware, guaranteed to be active
-
-    $client = new Rest($session->getShop(), $session->getAccessToken());
-    $result = $client->get('products/count');
-
-    return response($result->getDecodedBody());
-})->middleware('shopify.auth');
-
-Route::get('/api/products', function (Request $request) {
-    /** @var AuthSession */
-    $session = $request->get('shopifySession'); // Provided by the shopify.auth middleware, guaranteed to be active
-
-    $client = new Rest($session->getShop(), $session->getAccessToken());
-    $result = $client->get('products');
-
-    return response($result->getDecodedBody());
-})->middleware('shopify.auth');
-
-Route::get('/api/products/create', function (Request $request) {
-    /** @var AuthSession */
-    $session = $request->get('shopifySession'); // Provided by the shopify.auth middleware, guaranteed to be active
-
-    $success = $code = $error = null;
-    try {
-        ProductCreator::call($session, 5);
-        $success = true;
-        $code = 200;
-        $error = null;
-    } catch (\Exception $e) {
-        $success = false;
-
-        if ($e instanceof ShopifyProductCreatorException) {
-            $code = $e->response->getStatusCode();
-            $error = $e->response->getDecodedBody();
-            if (array_key_exists("errors", $error)) {
-                $error = $error["errors"];
-            }
-        } else {
-            $code = 500;
-            $error = $e->getMessage();
-        }
-
-        Log::error("Failed to create products: $error");
-    } finally {
-        return response()->json(["success" => $success, "error" => $error], $code);
-    }
-})->middleware('shopify.auth');
-
 Route::post('/api/webhooks', function (Request $request) {
+
     try {
         $topic = $request->header(HttpHeaders::X_SHOPIFY_TOPIC, '');
 
         $response = Registry::process($request->header(), $request->getContent());
+
+
         if (!$response->isSuccess()) {
             Log::error("Failed to process '$topic' webhook: {$response->getErrorMessage()}");
             return response()->json(['message' => "Failed to process '$topic' webhook"], 500);

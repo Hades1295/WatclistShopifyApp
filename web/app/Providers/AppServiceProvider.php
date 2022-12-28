@@ -7,6 +7,8 @@ use App\Lib\Handlers\AppUninstalled;
 use App\Lib\Handlers\Gdpr\CustomersDataRequest;
 use App\Lib\Handlers\Gdpr\CustomersRedact;
 use App\Lib\Handlers\Gdpr\ShopRedact;
+use App\Lib\Handlers\InventoryUpdated;
+use App\Lib\Handlers\ProductUpdated;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 use Shopify\Context;
@@ -56,6 +58,8 @@ class AppServiceProvider extends ServiceProvider
         URL::forceScheme('https');
 
         Registry::addHandler(Topics::APP_UNINSTALLED, new AppUninstalled());
+        Registry::addHandler(Topics::PRODUCTS_UPDATE, new ProductUpdated());
+        Registry::addHandler(Topics::INVENTORY_ITEMS_UPDATE, new InventoryUpdated());
 
         /*
          * This sets up the mandatory GDPR webhooks. You’ll need to fill in the endpoint to be used by your app in the
