@@ -1,0 +1,29 @@
+<body>
+    <script src="{{ 'axios.js' | asset_url }}" defer="defer"></script>
+    <script src="{{ 'theme.js' | asset_url }}" defer="defer"></script>
+</body>
+<div class="textings">
+    <button class="watchlist-btn" data-customer-email="{{ customer.email }}" data-customer="{{ customer.id }}" data-product="{{ product.id }}" data-app-domain="{{block.settings.button_url}}">{{ block.settings.button_name }}</button>
+</div>
+
+
+
+<!-- <script src="https://unpkg.com/axios/dist/axios.min.js"></script> -->
+{% schema %}
+{
+    "name": "Product Page customize",
+    "target":"section",
+    "settings": [
+                    {
+                      "type":"text",
+                      "label":"Add a Custom name for the button",
+                       "id":"button_name"              
+                    },
+                    {   
+                     "id":"button_url",
+                     "type":"url",
+                     "label":"adding Button url"
+                    }
+                ]
+}
+{% endschema %}

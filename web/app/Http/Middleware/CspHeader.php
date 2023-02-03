@@ -21,6 +21,8 @@ class CspHeader
      */
     public function handle(Request $request, Closure $next)
     {
+            // dd($request->all());
+        //  return $reques   
         $shop = Utils::sanitizeShopDomain($request->query('shop', ''));
 
         if (Context::$IS_EMBEDDED_APP) {

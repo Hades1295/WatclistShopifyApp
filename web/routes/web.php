@@ -41,6 +41,7 @@ Route::group(['prefix' => '/api', 'middleware' => ['shopify.auth']], function ()
     Route::get('/products/create', [ProductController::class, 'seed']);
 });
 
+
 Route::fallback(function (Request $request) {
     if (Context::$IS_EMBEDDED_APP &&  $request->query("embedded", false) === "1") {
         if (env('APP_ENV') === 'production') {
@@ -122,7 +123,7 @@ Route::post('/api/webhooks', function (Request $request) {
         $topic = $request->header(HttpHeaders::X_SHOPIFY_TOPIC, '');
 
         $response = Registry::process($request->header(), $request->getContent());
-
+        logger($response);
 
         if (!$response->isSuccess()) {
             Log::error("Failed to process '$topic' webhook: {$response->getErrorMessage()}");
